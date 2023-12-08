@@ -1,0 +1,143 @@
+
+#before copying this just make sure you get your own API and change your key accordin to your own value
+
+#first part of this code has been given by coinmarketcap api.
+#i just change the limit of the result by defualt it will show 5000 at line 18 i altered it 20 you can change it according to your own desire
+
+
+#This example uses Python 2.7 and the python-request library.
+
+from requests import Request, Session
+from requests.exceptions import ConnectionError, Timeout, TooManyRedirects
+import json
+
+
+url = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest'
+parameters = {
+  'start':'1',
+  'limit':'20',
+  'convert':'USD'
+}
+headers = {
+  'Accepts': 'application/json',
+  'X-CMC_PRO_API_KEY': 'b8d97a21-c4ca-4200-8333-931989825251',
+}
+
+session = Session()
+session.headers.update(headers)
+
+try:
+  response = session.get(url, params=parameters)
+  data = json.loads(response.text)
+  print(data)
+except (ConnectionError, Timeout, TooManyRedirects) as e:
+  print(e)
+
+===================
+import pandas as pd
+pd.json_normalize(data['data'])
+====================
+#in this code line i am passing data of the array to the variable and also i am adding new column and current time in the timestamp column 
+pd.set_option('display.max_column',None)
+df = pd.json_normalize(data['data'])
+df['timestamp'] = pd.to_datetime('now')
+df #this i am using to show the result of the dataframe in jupyter so dont confuse yourself 
+=======================
+#here i make function because i am going to call this function after every 60 second because we are trying to get the value of the currency after every 60 and store that 
+#value in our computer 
+def api_runner():
+
+    url = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest'
+    parameters = {
+      'start':'1',
+      'limit':'20',
+      'convert':'USD'
+    }
+    headers = {
+      'Accepts': 'application/json',
+      'X-CMC_PRO_API_KEY': 'b8d97a21-c4ca-4200-8333-931989825251',
+    }
+
+    session = Session()
+    session.headers.update(headers)
+
+    try:
+      response = session.get(url, params=parameters)
+      data = json.loads(response.text)
+      print(data)
+    except (ConnectionError, Timeout, TooManyRedirects) as e:
+      print(e)
+    df = pd.json_normalize(data['data'])
+    df['timestamp'] = pd.to_datetime('now')
+    df
+
+    #you can use this if condition if you want to store every new value in your localhost and if it already exist by that value you can create another file
+  #and make new file just by extension 
+    #if not os.path.isfile('/Users/usamaasif/Downloads/API.csv'):
+       # df.to_csv('/Users/usamaasif/Downloads/API.csv',header='column_names')
+    #else:
+       # df.to_csv('/Users/usamaasif/Downloads/API.csv', mode='a', header=False)
+    =======================
+#here i am calling api_runner function and we use built in library to trigger the function after every 60 seconds
+   import os 
+from time import time
+from time import sleep
+
+for i in range(333): #333 is becasue our api only allow us 333 time api calling every day and then it does not work 
+    api_runner()
+    print('API Runner completed')
+    sleep(60) #sleep for 1 minute
+exit()
+
+==============
+#here we are reading our crearted file and we are showing it by dataframe 
+df72 = pd.read_csv('/Users/usamaasif/Downloads/API.csv')
+df72
+
+===============
+#in our excel file when you will open there will be so many scientific number and now we are transforming our data according to ETL process 
+# One thing I noticed was the scientific notation. I like it, but I want to be able to see the numbers in this case
+
+pd.set_option('display.float_format', lambda x: '%.5f' % x)
+#here we are selecting only specific data which we are going to show with the help of python.
+df3 = df.groupby('name', sort=False)[['quote.USD.percent_change_1h','quote.USD.percent_change_24h','quote.USD.percent_change_7d','quote.USD.percent_change_30d','quote.USD.percent_change_60d','quote.USD.percent_change_90d']].mean()
+df3
+
+===================
+df4 = df3.stack()
+df4
+
+================
+df5 = df4.to_frame(name='values')
+df5
+========
+df5.count()
+
+
+
+=======
+#from df5 it will show the total count so just make sure that you change according to that
+index = pd.Index(range(120))
+df6 = df5.reset_index()
+df6
+
+===========
+df7['percent_change'] = df7['percent_change'].replace(['quote.USD.percent_change_24h','quote.USD.percent_change_7d','quote.USD.percent_change_30d','quote.USD.percent_change_60d','quote.USD.percent_change_90d'],['24h','7d','30d','60d','90d'])
+df7
+
+==========
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+===========
+sns.catplot(x='percent_change', y='values', hue='name', data=df7, kind='point')
+df10 = df[['name','quote.USD.price','timestamp']]
+df10 = df10.query("name == 'Bitcoin'")
+df10
+==========
+sns.set_theme(style="darkgrid")
+sns.lineplot(x='timestamp', y='quote.USD.price', data = df10)
+
+
+
+
